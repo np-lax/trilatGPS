@@ -16,6 +16,11 @@ class AccessPoint:
 		self.lon_a = []
 		self.strength = []
 
+		#arrays to hold ECEF coords
+		self.xCoords = []
+		self.yCoords = []
+		self.zCoords = []
+
 	def get_bssid(self):
 		"""return bssid of access point"""
 		if self.bssid:
@@ -54,6 +59,24 @@ class AccessPoint:
 		else:
 			return -1
 
+	def get_lats(self):
+		if self.lat_a[-1]:
+			return self.lat_a
+		else:
+			return -1
+	def get_lons(self):
+		if self.lon_a[-1]:
+			return self.lon_a
+		else:
+			return -1
+	def get_strs(self):
+		if self.strength[-1]:
+			return self.strength
+		else:
+			return -1
+
+
+
 def ap_exists(bssid, ap_list):
 	"""check if ap object is in master list of AccessPoints
 		:param bssid: access point BSSID from .gpsxml FILE
@@ -67,11 +90,28 @@ def ap_exists(bssid, ap_list):
 			if bssid == ap_list[x].get_bssid():
 				return True
 	else:
-		return False
+ 		return False
 
 	return False
 
-def inflate_ap(ap, line):
+#seperate from obj.update() because prgm only has bssid when updating, not the object. So rather than doing a lookup and then updating, just combined them into single method
+def update_ap(bssid, ap_list, lat, lon, sig):
+	"""pull ap from master list and update it with newest coords/strength
+	        :param bssid: access point BSSID from .gpsxml FILE
+		:param lat: new latitude
+		:param lon: new longitude
+		:param sig: new signal strength
+	        :param ap_list: master list of APs to check against
+                :returns: null
+	"""
+	size = len(ap_list)
+
+	if size > 0:
+		for x in range(size):
+			if bssid == ap_list[x].get_bssid():
+				ap_list[x].update(lat, lon, sig) 
+
+def processInfo(line):
 	"""pull data from gpsxml file and add to new AccessPoint object
 		:param ap: AccessPoint object
 		:param line: next line in gpsxml file to pull data from
@@ -86,9 +126,7 @@ def inflate_ap(ap, line):
 	sig = re.search(sig_re, line)
 	sig = sig.group(0)[12:-1]
 
-	ap.update(lat, lon, sig)
-
-	return ap
+	return (lat, lon, sig)
 
 
 
@@ -108,22 +146,36 @@ except IOError:
 #initalize global list of access point objects
 ap_list = []
 
-#should this be a function? will it be run often? how to pull updates from file continuiously? 
 for line in f:
 	bssid = re.search(bssid_re, line)
 	if bssid:
-		bssid = bssid.group(0)[7:-1]
+		xml_bssid = bssid.group(0)[7:-1]
+		
+		
 		#filter out probe packets
-		if not bssid == '00:00:00:00:00:00':
-			if not ap_exists(bssid, ap_list):
+		if not xml_bssid == '00:00:00:00:00:00':
+			#pull coords & sig strength from gpsxml file
+			newAPInfo = processInfo(line)
+			xml_lat = newAPInfo[0]
+			xml_lon = newAPInfo[1]
+			xml_sig = newAPInfo[2]
+			
+			if not ap_exists(xml_bssid, ap_list):
 				#create new access point
-				pt = AccessPoint(bssid)
+				newestAP = AccessPoint(xml_bssid)
+				#commit inital data to new AP
+				newestAP.update(xml_lat, xml_lon, xml_sig)
 				#add to global AccessPoint object list
-				ap_list.append(inflate_ap(pt, line))
+				ap_list.append(newestAP)
+			else:			
+				update_ap(xml_bssid, ap_list, xml_lat, xml_lon, xml_sig)
+
 
 for x in range(len(ap_list)):
 	print(ap_list[x].get_bssid())
-	print(ap_list[x].get_current_strength())
+	print(ap_list[x].get_lats())
+	print(ap_list[x].get_lons())
+	print(ap_list[x].get_strs())
 
 
 
@@ -137,3 +189,4 @@ for x in range(len(ap_list)):
 
 
 
+  

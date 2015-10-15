@@ -1,0 +1,8 @@
+    <gps-point bssid="00:18:0A:22:2C:E4" source="00:18:0A:22:2C:E4" time-sec="1410279288" time-usec="575197" lat="34.661564" lon="-120.464378" spd="0.000000" heading="0.000000" fix="3" alt="24.858999" signal_dbm="-73" noise_dbm="0"/>
+
+    <gps-point bssid="00:18:0A:22:2C:E4" source="00:18:0A:22:2C:E4" time-sec="1410278595" time-usec="502023" lat="34.660892" lon="-120.463745" spd="7.355000" heading="271.560394" fix="3" alt="23.589001" signal_dbm="-70" noise_dbm="0"/>
+
+
+    <gps-point bssid="00:18:0A:22:2C:E4" source="00:18:0A:22:2C:E4" time-sec="1410287260" time-usec="662786" lat="34.661430" lon="-120.464836" spd="3.203000" heading="68.741898" fix="3" alt="21.818001" signal_dbm="-74" noise_dbm="0"/>
+
+
