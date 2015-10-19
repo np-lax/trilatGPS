@@ -34,9 +34,21 @@ class AccessPoint:
 			:param lon_u: longitude update
 			:param dbm_u: signal strength update
 		"""
-		self.lat_a.append(lat_u)
-		self.lon_a.append(lon_u)
-		self.strength.append(dbm_u)
+
+		#check for empty arrays, if yes, commit initial data
+		if (not self.lat_a and not self.lon_a):
+			self.lat_a.append(lat_u)
+			self.lon_a.append(lon_u)
+			self.strength.append(dbm_u)
+		#ensure arrays are the same length
+		elif (len(self.lat_a) == len(self.lon_a) and len(self.lat_a) == len(self.strength) and len(self.lon_a) == len(self.strength)):
+			#run through list, ensure lat/long combos are all unique
+			for index in range(0, len(self.lon_a)):
+				if (lat_u != self.lat_a[index] and lon_u != self.lon_a[index]):
+					self.lat_a.append(lat_u)
+					self.lon_a.append(lon_u)
+					self.strength.append(dbm_u)
+
 
 	def get_current_lat(self):
 		""":returns: last recorded latitude of access point"""
@@ -111,7 +123,7 @@ def update_ap(bssid, ap_list, lat, lon, sig):
 			if bssid == ap_list[x].get_bssid():
 				ap_list[x].update(lat, lon, sig) 
 
-def processInfo(line):
+def gather_ap_info(line):
 	"""pull data from gpsxml file and add to new AccessPoint object
 		:param ap: AccessPoint object
 		:param line: next line in gpsxml file to pull data from
@@ -129,6 +141,7 @@ def processInfo(line):
 	return (lat, lon, sig)
 
 
+#MAIN PROGRAM#
 
 #build out regular expressions for each piece of data in the gpsxml file
 bssid_re = '(bssid="([0-9A-F]{2}[:]){5}([0-9A-F]{2})")'
@@ -136,9 +149,18 @@ lat_re = '(lat="([0-9]{2})[.]([0-9]{6})")'
 lon_re = '(lon="[-?]([0-9]{2}[0-9]?)[.]([0-9]{6})")'
 sig_re = '(signal_dbm="[-]([0-9]{2})")'
 
+
+
 #open gpsxml file (how to do this dynamically?) - could just run through periodically
+
+if len(sys.argv) != 2:
+	print("Usage: python trilatGPS.py [filename]")
+else:
+	fname = sys.argv[1]
+
+
 try:
-	f = open('gpstest', 'r')
+	f = open(fname, 'r')
 except IOError:
 	print("DEBUG: ERROR - COULD NOT READ FILE")
 	sys.exit()
@@ -150,16 +172,15 @@ for line in f:
 	bssid = re.search(bssid_re, line)
 	if bssid:
 		xml_bssid = bssid.group(0)[7:-1]
-		
-		
 		#filter out probe packets
 		if not xml_bssid == '00:00:00:00:00:00':
 			#pull coords & sig strength from gpsxml file
-			newAPInfo = processInfo(line)
+			newAPInfo = gather_ap_info(line)
 			xml_lat = newAPInfo[0]
 			xml_lon = newAPInfo[1]
 			xml_sig = newAPInfo[2]
 			
+			#check if the access point is already in the master AP list	
 			if not ap_exists(xml_bssid, ap_list):
 				#create new access point
 				newestAP = AccessPoint(xml_bssid)
@@ -170,23 +191,17 @@ for line in f:
 			else:			
 				update_ap(xml_bssid, ap_list, xml_lat, xml_lon, xml_sig)
 
+print("AP Scan complete - " + str(len(ap_list)) + " unique APs added to list")
 
+#initalize list of APs with at least 3 data points each
+pruned_ap_list = []
+
+#check for at least 3 data points per AP, if so, add to prunded list
 for x in range(len(ap_list)):
-	print(ap_list[x].get_bssid())
-	print(ap_list[x].get_lats())
-	print(ap_list[x].get_lons())
-	print(ap_list[x].get_strs())
+	if (len(ap_list[x].get_lats()) >= 3):
+		pruned_ap_list.append(ap_list[x])
+		#print("GOOD AP: " + str(ap_list[x].get_bssid()) + "" + str(ap_list[x].get_lats()))i
 
-
-
-#for line in f:
-
-
-#ap = AccessPoint(match)
-
-#print(ap.get_bssid())
-
-
-
-
-  
+print("Pruning complete - " + str(len(pruned_ap_list)) + " APs suitable for analysis (3 unique data points)")
+#TO DO
+#
